@@ -1,0 +1,12 @@
+Drivers/
+MDK-ARM/*/
+*.txt
+*.xlsx
+*.uvguix.*
+*.crf
+*.d 
+*.o
+\#*\#
+*~
+.DS_Store
+Gemfile.lock
