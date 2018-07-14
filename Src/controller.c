@@ -13,76 +13,82 @@ uint16_t pwm_value=0, acc_value=0;
 //volatile error_status_t  s_error;
 //volatile run_status_t    s_run;
 
-// 无线接收字节暂存数组
-extern uint8_t receive_value[6];
-// 模拟量接收值
-extern uint32_t trans_value;
-
-// 数字量控制位
-extern volatile u8_Bits_t DIO_byte;
-
-extern uint8_t reset_flag;
 
 
 //---------------------------------------------------------
 // 函数声明
-uint8_t rec_increment_check(REC_data_t *i_array, uint16_t len);
 
 ///////////////////////////////////////////////////////////
 
+////SysTick实现延时n_ms，中断方式
+//void delay_ms(volatile unsigned long nms)
+//{
+//    //SYSTICK分频--1ms的系统时钟中断
+//    if (SysTick_Config(HAL_RCC_GetHCLKFreq()/1000))
+//    {
+//   
+//        while (1);
+//    }
+//    time_delay = nms;//读取定时时间
+//    while(time_delay);
+//    SysTick->CTRL=0x00; //关闭计数器
+//    SysTick->VAL =0X00; //清空计数器
+//}
 /**
  * 原cube HAL库中中断处理回调函数重写
  * Systick 在 main.c 中配置为 HAL_RCC_GetHCLKFreq()/1000，即每 1ms 中断一次
  */
-void HAL_SYSTICK_Callback(void)
-{
-    static uint16_t      tLEDflicker;
-    static uint16_t      tLEDblink;
-    static uint16_t      tLEDflash;
+//void HAL_SYSTICK_Callback(void)
+//{
+//    static uint16_t      tLEDflicker=0;
+//    static uint16_t      tLEDflash=0;
     
-   LED_Status.On  = LED_ON;
-   LED_Status.Off = LED_OFF;
+//   if(time_delay)
+//		time_delay--;
    
-   /* LED 闪烁位 bits (借鉴自 CANopenNode V1.1)*/
-   //10Hz
-   if   (++tLEDflicker == 50)    LED_Status.Flickering = LED_ON;
-   else if(tLEDflicker >= 100){  LED_Status.Flickering = LED_OFF; tLEDflicker = 0;}
-   //
-   if   (++tLEDblink == 200)     LED_Status.Blinking = LED_ON;
-   else if(tLEDblink >= 400){    LED_Status.Blinking = LED_OFF; tLEDblink = 0;}
+//   LED_Status.On  = LED_ON;
+//   LED_Status.Off = LED_OFF;
+//   
+//   /* LED 闪烁位 bits (借鉴自 CANopenNode V1.1)*/
+//   //10Hz
+//   if   (++tLEDflicker == 50)    LED_Status.Flickering = LED_ON;
+//   else if(tLEDflicker >= 100){  LED_Status.Flickering = LED_OFF; tLEDflicker = 0;}
+//   //
+//   if   (++tLEDflash == 800)     LED_Status.SingleFlash = LED_ON;
+//   else if(tLEDflash >= 1000){    LED_Status.SingleFlash = LED_OFF; tLEDflash = 0;}
    //flashes
    //tLEDflash = tLEDflash + 1;
-   switch(++tLEDflash){
-      case 200:  LED_Status.TripleFlash = LED_ON;
-                 LED_Status.DoubleFlash = LED_ON;
-                 LED_Status.SingleFlash = LED_ON; break;
-      case 400:  LED_Status.TripleFlash = LED_OFF;
-                 LED_Status.DoubleFlash = LED_OFF;
-                 LED_Status.SingleFlash = LED_OFF; break;
-      case 600:  LED_Status.TripleFlash = LED_ON;
-                 LED_Status.DoubleFlash = LED_ON; break;
-      case 800:  LED_Status.TripleFlash = LED_OFF;
-                 LED_Status.DoubleFlash = LED_OFF; break;
-      case 1000: LED_Status.TripleFlash = LED_ON; break;
-      case 1200: LED_Status.TripleFlash = LED_OFF; break;
-      //case 2000: tLEDflash = 0; break;
-      default:  break;
-   }
-   if(tLEDflash >= 2000) tLEDflash = 0;
+//    switch(++tLEDflash){
+//       case 200:  LED_Status.TripleFlash = LED_ON;
+//                  LED_Status.DoubleFlash = LED_ON;
+//                  LED_Status.SingleFlash = LED_ON; break;
+//       case 400:  LED_Status.TripleFlash = LED_OFF;
+//                  LED_Status.DoubleFlash = LED_OFF;
+//                  LED_Status.SingleFlash = LED_OFF; break;
+//       case 600:  LED_Status.TripleFlash = LED_ON;
+//                  LED_Status.DoubleFlash = LED_ON; break;
+//       case 800:  LED_Status.TripleFlash = LED_OFF;
+//                  LED_Status.DoubleFlash = LED_OFF; break;
+//       case 1000: LED_Status.TripleFlash = LED_ON; break;
+//       case 1200: LED_Status.TripleFlash = LED_OFF; break;
+//       //case 2000: tLEDflash = 0; break;
+//       default:  break;
+//    }
+//    if(tLEDflash >= 2000) tLEDflash = 0;
    
    // 连接状态/错误指示灯
-   if(s_error.nrf_not_exist==1 || s_error.is_emergency==1)  LED_RD_Turn(LED_Status.Flickering);
-   else if(s_error.switch_init_fail==1)                     LED_RD_Turn(LED_Status.Off);
-//   else if(s_error.nrf_rcv_fail==1 )                        LED_RD_Turn(LED_Status.Off);
-   else                                                     LED_RD_Turn(LED_Status.Blinking);
-   
-    // 学习/自动运行指示灯
-    if(s_run.sys_autorun==1)            LED_GR_Turn(LED_Status.Flickering);
-    else if(s_run.rec_success==1)       LED_GR_Turn(LED_Status.On);
-    else if(s_run.sys_under_rec==1)     LED_GR_Turn(LED_Status.Blinking);
-    //else if(s_run.sys_manual==1)        LED_GR_Turn(LED_Status.SingleFlash);
-    else                                LED_GR_Turn(LED_Status.Off);
-}
+//   if(s_error.nrf_not_exist==1 || s_error.is_emergency==1)  LED_RD_Turn(LED_Status.Flickering);
+//   else if(s_error.switch_init_fail==1)                     LED_RD_Turn(LED_Status.Off);
+////   else if(s_error.nrf_rcv_fail==1 )                        LED_RD_Turn(LED_Status.Off);
+//   else                                                     LED_RD_Turn(LED_Status.SingleFlash);
+//   
+//    // 学习/自动运行指示灯
+//    if(s_run.sys_autorun==1)            LED_GR_Turn(LED_Status.Flickering);
+//    else if(s_run.rec_success==1)       LED_GR_Turn(LED_Status.On);
+//    else if(s_run.sys_under_rec==1)     LED_GR_Turn(LED_Status.SingleFlash);
+//    //else if(s_run.sys_manual==1)        LED_GR_Turn(LED_Status.SingleFlash);
+//    else                                LED_GR_Turn(LED_Status.Off);
+//}
 
 /**
  * PWM 初始化
@@ -111,6 +117,7 @@ printf("无线模块在位检查...\r\n");
 printf("!!!!!! 未检测到无线模块 !!!!!!\r\n");
 #endif
 		HAL_Delay(CHK_FAIL);
+        //delay_ms(CHK_FAIL);
         s_error.nrf_not_exist = 1;
 	}
   NRF24L01_RX_Mode();
@@ -134,10 +141,11 @@ uint8_t rcv_nrf_data(void)
             // 数字量控制字节
             DIO_byte.Byte_Val = receive_value[1];
             // 接收的模拟量
-            trans_value = (receive_value[3]<<8) + receive_value[4];
+            trans_value = receive_value[3]*256 + receive_value[4];
      
         }
         HAL_Delay(NRF_DELAY);
+        //delay_ms(NRF_DELAY);
         s_error.nrf_rcv_fail = 0;
         return 0;
 	}
@@ -147,6 +155,7 @@ printf("        !!!!!!无线接收失败!!!!!!\r\n");
 #endif
         s_error.nrf_rcv_fail = 1;
         HAL_Delay(RCV_FAIL);
+        //delay_ms(RCV_FAIL);
         return 1;
     }
 }
@@ -155,23 +164,23 @@ printf("        !!!!!!无线接收失败!!!!!!\r\n");
  * 检查各主要开关是否归位
  * 返回 1=未归位，0=已归位
  */
-uint8_t switch_check(void)
-{   
-    uint8_t rcv_rslt;
-    rcv_rslt = rcv_nrf_data();
+// uint8_t switch_check(void)
+// {   
+//     uint8_t rcv_rslt;
+//     rcv_rslt = rcv_nrf_data();
     
-    if(rcv_rslt==1 || (DIO_byte.Byte_Val & 0x3F)!=0 || trans_value>MIN_VALID){
-        s_error.switch_init_fail = 1;
-#if UART_DEBUG
-printf("        开关未归位！！\r\n");
-#endif
-        return 1;
-    }
-    else{
-        s_error.switch_init_fail = 0;
-        return 0;
-    }
-}
+//     if(rcv_rslt==1 || (DIO_byte.Byte_Val & 0x3F)!=0 || trans_value>MIN_VALID){
+//         s_error.switch_init_fail = 1;
+// #if UART_DEBUG
+// printf("        开关未归位！！\r\n");
+// #endif
+//         return 1;
+//     }
+//     else{
+//         s_error.switch_init_fail = 0;
+//         return 0;
+//     }
+// }
 
 /**
  * 由接收到的数据控制硬件数字输出状态

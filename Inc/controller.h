@@ -65,10 +65,11 @@
 
 
 // º¯ÊýÉùÃ÷////////////////////////////////////
+void delay_ms(volatile unsigned long nms);
 void PWM_Init(void);
 void check_nrf(void);
 uint8_t rcv_nrf_data(void);
-uint8_t switch_check(void);
+// uint8_t switch_check(void);
 void digit_state_update(void);
 void analog_state_update(uint32_t a_value);
 void HAL_SYSTICK_Callback(void);

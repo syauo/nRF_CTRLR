@@ -196,10 +196,10 @@ typedef struct {
       GPIO_PinState On          ;
       GPIO_PinState Off         ;
       GPIO_PinState Flickering  ;
-      GPIO_PinState Blinking    ;
+    //   GPIO_PinState Blinking    ;
       GPIO_PinState SingleFlash ;
-      GPIO_PinState DoubleFlash ;
-      GPIO_PinState TripleFlash ;
+    //   GPIO_PinState DoubleFlash ;
+    //   GPIO_PinState TripleFlash ;
 }LED_Status_t;
 
 #define LED_ON  GPIO_PIN_RESET
@@ -207,11 +207,12 @@ typedef struct {
 
 // 系统运行主状态定义 
    typedef enum {
-       S_Manual_Up   = 0x00,
-       S_Manual_Down = 0x01,
-       S_Auto_Up     = 0x02,
-       S_Auto_Down   = 0x03,
-       S_Standby     = 0x04
+       S_Emerg       = 0x00,
+       S_Manual_Up   = 0x01,
+       S_Manual_Down = 0x02,
+       S_Auto_Up     = 0x03,
+       S_Auto_Down   = 0x04,
+       S_Standby     = 0x05
    }run_state_t;
    
 // 错误状态
@@ -239,6 +240,12 @@ extern volatile LED_Status_t LED_Status;
 extern volatile error_status_t s_error;
 extern volatile run_status_t s_run;
 extern REC_data_t  up_rec[256], dwn_rec[256];
+// 无线接收字节暂存数组
+extern uint8_t receive_value[6];
+// 模拟量接收值
+extern uint16_t trans_value;
+// 数字量控制位
+extern volatile u8_Bits_t DIO_byte;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
