@@ -60,16 +60,16 @@ uint8_t     reset_flag = 1;             // 复位标志
 uint8_t     REC_flag = 0;               // 学习标志
 uint8_t     rcv_not_ok = 0;             // 无线接收失败标志
 volatile u8_Bits_t  DIO_byte;           // 表示数字端口状态的字节
-volatile uint8_t    r_index = 0;
-uint8_t     up_len = 0, dwn_len = 0;    // 上升、下降学习记录长度
 
+uint16_t    up_len = 0, dwn_len = 0;    // 上升、下降学习记录长度
+volatile uint16_t    r_index = 0;
 uint16_t    tLEDflicker=0;
 uint16_t    tLEDflash=0;
-uint16_t    count=0;
+
 uint16_t    trans_value = 0;            // 接收AD转换值
 
 run_state_t  ctrlr_State = S_Standby;
-REC_data_t   up_rec[REC_LEN], dwn_rec[REC_LEN]; // 学习记录数组
+REC_data_t   up_rec[256], dwn_rec[256]; // 学习记录数组
 volatile  LED_Status_t    LED_Status;   // 指示灯状态
 volatile  error_status_t  s_error;       
 volatile  run_status_t    s_run;
@@ -136,12 +136,11 @@ int main(void)
   check_nrf();
   HAL_TIM_Base_Start(&htim2);
   ENCODER_CNT_Set(0);
-  reset_flag = 1;
 
-  #if UART_DEBUG
-  printf("外设初始化OK。\r\n");
-  #endif
-
+#if UART_DEBUG
+printf("外设初始化OK。\r\n");
+#endif
+    reset_flag = 1;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -149,16 +148,16 @@ int main(void)
   while (1)
   {
 
-   printf("\033[1;1H");      
+         
 
    
    /* LED 闪烁位 bits (借鉴自 CANopenNode V1.1)*/
    //10Hz
-   if   (++tLEDflicker == 10)    LED_Status.Flickering = LED_ON;
-   else if(tLEDflicker >= 20){  LED_Status.Flickering = LED_OFF; tLEDflicker = 0;}
+   if   (++tLEDflicker == 1)    LED_Status.Flickering = LED_ON;
+   else if(tLEDflicker >= 2){  LED_Status.Flickering = LED_OFF; tLEDflicker = 0;}
    //
-   if   (++tLEDflash == 90)     LED_Status.SingleFlash = LED_ON;
-   else if(tLEDflash >= 100){    LED_Status.SingleFlash = LED_OFF; tLEDflash = 0;}
+   if   (++tLEDflash == 3)     LED_Status.SingleFlash = LED_ON;
+   else if(tLEDflash >= 4){    LED_Status.SingleFlash = LED_OFF; tLEDflash = 0;}
    
    if(s_error.nrf_not_exist==1 || s_error.is_emergency==1)  LED_RD_Turn(LED_Status.Flickering);
    else if(s_error.switch_init_fail==1)                     LED_RD_Turn(LED_Status.Off);
@@ -172,11 +171,8 @@ int main(void)
     //else if(s_run.sys_manual==1)        LED_GR_Turn(LED_Status.SingleFlash);
     else                                LED_GR_Turn(LED_Status.Off);
     
-   if(count==0)
+   
     rcv_not_ok = rcv_nrf_data();     // 接收遥控器数据
-   count++;
-   if(count >= 20)
-       count = 0;
    
     digit_state_update();            // 喇叭、照明、发动机启停
 
@@ -188,9 +184,9 @@ int main(void)
             switch(ctrlr_State){
                 //////// 急停模式 /////////////////
                 case S_Emerg:
-                    #if UART_DEBUG
-                    printf("!!!!急停状态***************\r\n");
-                    #endif 
+#if UART_DEBUG
+printf("!!!!急停状态***************\r\n");
+#endif 
                     // 进入状态
                       s_error.is_emergency = 1;
                       
@@ -210,9 +206,9 @@ int main(void)
                          trans_value > MIN_VALID){
                              
                           s_error.switch_init_fail = 1;
-                        #if UART_DEBUG
-                        printf("XXXXXXXX 开关未归位！！\r\n");
-                        #endif
+#if UART_DEBUG
+printf("XXXXXXXX 开关未归位！！\r\n");
+#endif
                       }
                       else{
                           s_error.switch_init_fail = 0;
@@ -223,9 +219,9 @@ int main(void)
                         
                 //////// 待机模式 /////////////////
                 case S_Standby: 
-                    #if UART_DEBUG
-                    printf(">>>>待机状态---------------\r\n");
-                    #endif
+#if UART_DEBUG
+printf(">>>>待机状态---------------\r\n");
+#endif
                     // 进入状态
                     s_run.sys_autorun = 0;
 
@@ -234,38 +230,32 @@ int main(void)
                     r_index = 1;
                     // 判断比较上下学习结果 成功则 REC_flag |= 0x04
                     if(REC_flag == 0x03){
-                        int16_t rslt = up_rec[up_len].enc_cnt - dwn_rec[dwn_len].enc_cnt;
-                        if(abs(rslt) <= REC_POS_TLR){
+                        if(abs(up_rec[up_len].enc_cnt - dwn_rec[dwn_len].enc_cnt) <= REC_POS_TLR){
                             REC_flag |= 0x24; // 置位学习成功标志，并禁止先自动下降
                             s_run.rec_success = 1;
-                            
-                            #if UART_DEBUG
-                            printf("\033[9;1H **** 上下双向学习成功 ****\r\n");
-                            #endif
-                        }
-                        else if((REC_flag & 0x04)!=0x04){   
+#if UART_DEBUG
+printf("        **** 上下双向学习成功 ****\r\n");
+#endif
+                        }else if((REC_flag & 0x04)!=0x04){   
                             REC_flag &= 0xFB;
                             s_run.rec_success = 0;
-                            
-                            #if UART_DEBUG
-                            printf("\033[9;1H !!!! 上下双向学习未成功 !!!!\r\n");
-                            #endif
+#if UART_DEBUG
+printf("        !!!! 上下双向学习未成功 !!!!\r\n");
+#endif
                         }else
                         s_run.rec_success = 0;
                     }
                     // 切换
                     if(Is_HOPPER_UP() && !Is_AUTORUN()){
                         if(Is_REC_UP()){
-                            memset(&up_rec,0,sizeof(REC_data_t)*REC_LEN);
-
+                            memset(&up_rec,0,sizeof(REC_data_t)*256); // 清空数组
                         }
                         ctrlr_State = S_Manual_Up;
                     }
                     else 
                         if(Is_HOPPER_DOWN() && !Is_AUTORUN()){
                             if(Is_REC_DWN()){
-                                memset(&dwn_rec,0,sizeof(REC_data_t)*REC_LEN); 
-
+                                memset(&dwn_rec,0,sizeof(REC_data_t)*256); // 清空数组
                             }
                             ctrlr_State = S_Manual_Down;
                         }
@@ -284,23 +274,22 @@ int main(void)
                     break;
                 /////// 手动上升 /////////////////
                 case S_Manual_Up:
-                    #if UART_DEBUG
-                    printf(">>>>手动上升状态----------\r\n");
-                    #endif
+#if UART_DEBUG
+printf(">>>>手动上升状态----------\r\n");
+#endif
                     // 进入状态    
                     s_run.sys_manual = 1;
                     if(Is_REC_UP()){
                         s_run.sys_under_rec = 1;
-                        int16_t i_rslt = ENC_VAL- up_rec[r_index-1].enc_cnt; // 有符号
-                        if(i_rslt >= REC_STEP){
+                        if(abs(trans_value - up_rec[r_index-1].adc_data)>=REC_STEP){
                             up_rec[r_index].adc_data = trans_value;   // 记录给定值
-                            up_rec[r_index].enc_cnt  = ENC_VAL;       // 记录编码器值
+                            up_rec[r_index].enc_cnt  = ENCODER_CNT_VALUE; // 记录编码器值
                             r_index += 1;
-                            if(r_index > REC_LEN) r_index = 0;
+                            if(r_index > 254) r_index = 0;
                         }
-                        #if UART_DEBUG
-                        printf("        上升学习中 [ r_index = %02d, adc = %04d, enc = %05d ]\r\n",r_index,up_rec[r_index-1].adc_data,up_rec[r_index-1].enc_cnt);
-                        #endif
+#if UART_DEBUG
+printf("        上升学习中 [ r_index = %02d, adc = %04d, enc = %05d ]\r\n",r_index,up_rec[r_index-1].adc_data,up_rec[r_index-1].enc_cnt);
+#endif
                     }
                     else 
                         s_run.sys_under_rec = 0;
@@ -309,24 +298,23 @@ int main(void)
                     // 切换
                     if(!Is_HOPPER_UP()){
                         // 判断是否学习成功
-                        if(r_index>=3 &&
+                        if(r_index>=5 &&
+                           //up_rec[r_index-1].adc_data < REC_STEP && 
                            up_rec[r_index].enc_cnt == 0 &&
                            up_rec[0].enc_cnt == 0 &&
-                           rec_increment_check(up_rec, r_index-1) == 1){
-                               up_rec[r_index].adc_data = PWM_SEG_S;
-                               up_rec[r_index].enc_cnt = ENC_VAL;
+                           rec_increment_check(up_rec, r_index) == 1){
+                               up_rec[r_index].adc_data = 0;
+                               up_rec[r_index].enc_cnt = ENCODER_CNT_VALUE;
                                up_len = r_index;
                                REC_flag |= 0x01;
-                               
-                               #if UART_DEBUG
-                               printf("\033[8;1H上升学习OK。\r\n");
-                               #endif
-                          }else{
+#if UART_DEBUG
+printf("        上升单程学习完成，数据 OK。\r\n");
+#endif
+                        }else{
                             REC_flag &= 0xFE;
-                              
-                            #if UART_DEBUG
-                            printf("\033[8;1H上升学习NG !!!\r\n");
-                            #endif
+#if UART_DEBUG
+printf("        上升单程学习 NG !!!\r\n");
+#endif
                         }
                         VALVE_A_Off();     
                         ctrlr_State = S_Standby;
@@ -335,49 +323,47 @@ int main(void)
                     break;
                 /////// 手动下降 /////////////////
                 case S_Manual_Down:
-                    #if UART_DEBUG
-                    printf(">>>>手动下降状态----------\r\n");
-                    #endif
+#if UART_DEBUG
+printf(">>>>手动下降状态----------\r\n");
+#endif
                     // 进入状态    
                     s_run.sys_manual = 1;
                     if(Is_REC_DWN()){
                         s_run.sys_under_rec = 1;
-                        int16_t i_rslt = ENC_VAL- dwn_rec[r_index-1].enc_cnt; // 有符号
-                        if(i_rslt >= REC_STEP){
+                        if(abs(trans_value - dwn_rec[r_index-1].adc_data)>=REC_STEP){
                             dwn_rec[r_index].adc_data = trans_value;   // 记录给定值
-                            dwn_rec[r_index].enc_cnt  = ENC_VAL;       // 记录编码器值
+                            dwn_rec[r_index].enc_cnt  = ENCODER_CNT_VALUE; // 记录编码器值
                             r_index += 1;
-                            if(r_index > REC_LEN) r_index = 0;
+                            if(r_index > 254) r_index = 0;
                         }
-                        #if UART_DEBUG
-                        printf("        下降学习中 [ r_index = %02d, adc = %04d, enc = %05d ]\r\n",r_index,dwn_rec[r_index-1].adc_data,dwn_rec[r_index-1].enc_cnt);
-                        #endif
+#if UART_DEBUG
+printf("        下降学习中 [ r_index = %02d, adc = %04d, enc = %05d ]\r\n",r_index,dwn_rec[r_index-1].adc_data,dwn_rec[r_index-1].enc_cnt);
+#endif
                     }
                     else
                         s_run.sys_under_rec = 0;
-                    
                     analog_state_update(trans_value);
                     
                     // 切换
                     if(!Is_HOPPER_DOWN()){
                         // 判断是否学习成功
-                        if(r_index>=3 &&
+                        if(r_index>=5 &&
+                           //dwn_rec[r_index-1].adc_data < REC_STEP && 
                            dwn_rec[r_index].enc_cnt == 0 &&
                            dwn_rec[0].enc_cnt == 0 &&
-                           rec_increment_check(dwn_rec, r_index-1) == 1){
-                               dwn_rec[r_index].adc_data = PWM_SEG_S;
-                               dwn_rec[r_index].enc_cnt = ENC_VAL;
+                           rec_increment_check(dwn_rec, r_index) == 1){
+                               dwn_rec[r_index].adc_data = 0;
+                               dwn_rec[r_index].enc_cnt = ENCODER_CNT_VALUE;
                                dwn_len = r_index;
                                REC_flag |= 0x02;
-                               #if UART_DEBUG
-                               printf("\033[8;20H 下降学习OK。\r\n");
-                               #endif
-                          }else{
+#if UART_DEBUG
+printf("        下降单程学习完成，数据 OK。\r\n");
+#endif
+                        }else{
                             REC_flag &= 0xFD;
-                              
-                            #if UART_DEBUG
-                            printf("\033[8;20H 下降学习NG !!!\r\n");
-                            #endif
+#if UART_DEBUG
+printf("        下降单程学习 NG !!!\r\n");
+#endif
                         }
                         VALVE_B_Off();
                         ctrlr_State = S_Standby;
@@ -386,33 +372,36 @@ int main(void)
                     break;
                 /////// 自动上升 /////////////////
                 case S_Auto_Up:
-                    #if UART_DEBUG
-                    printf(">>>>自动上升状态----------\r\n");
-                    #endif
+#if UART_DEBUG
+printf(">>>>自动上升状态----------\r\n");
+#endif
                     // 进入状态
                     s_run.sys_autorun = 1;
-                    if(ENC_VAL < REC_STEP-200){
-                        analog_state_update(PWM_SEG_QS+90);
-                    }
-                    else if(ENC_VAL > up_rec[r_index-1].enc_cnt &&
-                            ENC_VAL <= up_rec[r_index].enc_cnt){
+                    if(ENCODER_CNT_VALUE <= up_rec[r_index].enc_cnt && 
+                       ENCODER_CNT_VALUE >= up_rec[r_index-1].enc_cnt  ){
+                           if(up_rec[r_index].adc_data<190){
+                                analog_state_update(190);
+                           }else if(ENCODER_CNT_VALUE >= up_rec[up_len].enc_cnt){
+                                analog_state_update(0);
+                           }else if(ENCODER_CNT_VALUE >= up_rec[up_len].enc_cnt-500){
+                                analog_state_update(PWM_SEG_QS);
+                           }else if(ENCODER_CNT_VALUE >= up_rec[up_len].enc_cnt-1000){
+                                analog_state_update(PWM_SEG_QS+50);
+                           }else
+                            analog_state_update(up_rec[r_index].adc_data);
+#if UART_DEBUG
+printf("        自动上升中 [ r_index = %02d, adc = %04d, enc = %05d | act %05d]\r\n",r_index,up_rec[r_index].adc_data,up_rec[r_index].enc_cnt,ENCODER_CNT_VALUE);
+#endif
                             
-                                int16_t delta_ana = up_rec[r_index].adc_data - up_rec[r_index-1].adc_data;
-                                int16_t delta_enc = up_rec[r_index].enc_cnt - up_rec[r_index-1].enc_cnt;
-                                uint16_t ana_rslt = (ENC_VAL-up_rec[r_index].enc_cnt)*delta_ana/delta_enc + up_rec[r_index-1].adc_data;
-                                analog_state_update(ana_rslt);
-                                
-                                if(r_index<REC_LEN && r_index<=up_len)
-                                    r_index++;
-                            }
-
-                    #if UART_DEBUG
-                    printf("        自动上升中 [ r_index = %02d, adc = %04d, enc = %05d | act %05d]\r\n",r_index-1,up_rec[r_index-1].adc_data,up_rec[r_index-1].enc_cnt,ENC_VAL);
-                    #endif
-
+                    }
+                    if(ENCODER_CNT_VALUE >= up_rec[r_index].enc_cnt||
+                       ENCODER_CNT_VALUE <200){
+                           if(r_index<254 && r_index<=up_len)
+                               r_index++;
+                    }
                     // 停止
-                    if(ENC_VAL >= up_rec[up_len].enc_cnt  ||
-                       r_index > up_len){
+                    if(up_rec[up_len].enc_cnt <= ENCODER_CNT_VALUE ||
+                       r_index >= up_len){
                         
                         analog_state_update(0);
                     }
@@ -428,32 +417,36 @@ int main(void)
                     break;
                 /////// 自动下降 /////////////////
                 case S_Auto_Down:
-                    #if UART_DEBUG
-                    printf(">>>>自动下降状态----------\r\n");
-                    #endif
+#if UART_DEBUG
+printf(">>>>自动下降状态----------\r\n");
+#endif
                     // 进入状态
                     s_run.sys_autorun = 1;
-                    if(ENC_VAL < REC_STEP-200){
-                        analog_state_update(PWM_SEG_QS+90);
+                    if(ENCODER_CNT_VALUE <= dwn_rec[r_index].enc_cnt && 
+                       ENCODER_CNT_VALUE >= dwn_rec[r_index-1].enc_cnt  ){
+                           if(dwn_rec[r_index].adc_data<190){
+                                analog_state_update(190);
+                           }else if(ENCODER_CNT_VALUE >= dwn_rec[dwn_len].enc_cnt){
+                                analog_state_update(0);
+                           }else if(ENCODER_CNT_VALUE >= dwn_rec[dwn_len].enc_cnt-500){
+                                analog_state_update(PWM_SEG_QS);
+                           }else if(ENCODER_CNT_VALUE >= dwn_rec[dwn_len].enc_cnt-1000){
+                                analog_state_update(PWM_SEG_QS+50);
+                           }else
+                            analog_state_update(dwn_rec[r_index].adc_data);
+#if UART_DEBUG
+printf("        自动下降中 [ r_index = %02d, adc = %04d, enc = %05d | act %05d]\r\n",r_index,dwn_rec[r_index].adc_data,dwn_rec[r_index].enc_cnt,ENCODER_CNT_VALUE);
+#endif
+                            
                     }
-                    else if(ENC_VAL > dwn_rec[r_index-1].enc_cnt &&
-                            ENC_VAL <= dwn_rec[r_index].enc_cnt){
-                            
-                                int16_t delta_ana = dwn_rec[r_index].adc_data - dwn_rec[r_index-1].adc_data;
-                                int16_t delta_enc = dwn_rec[r_index].enc_cnt - dwn_rec[r_index-1].enc_cnt;
-                                uint16_t ana_rslt = (ENC_VAL-dwn_rec[r_index].enc_cnt)*delta_ana/delta_enc + dwn_rec[r_index-1].adc_data;
-                                analog_state_update(ana_rslt);
-                                
-                                if(r_index<REC_LEN && r_index<=dwn_len)
-                                    r_index++;
-                            }
-                    #if UART_DEBUG
-                    printf("        自动下降中 [ r_index = %02d, adc = %04d, enc = %05d | act %05d]\r\n",r_index-1,dwn_rec[r_index-1].adc_data,dwn_rec[r_index-1].enc_cnt,ENC_VAL);
-                    #endif
-                            
+                    if(ENCODER_CNT_VALUE >= dwn_rec[r_index].enc_cnt||
+                       ENCODER_CNT_VALUE <200){
+                           if(r_index<254 && r_index<=dwn_len)
+                            r_index++;
+                    }
                     // 停止
 
-                    if(dwn_rec[dwn_len].enc_cnt <= ENC_VAL ||
+                    if(dwn_rec[dwn_len].enc_cnt <= ENCODER_CNT_VALUE ||
                        r_index >= dwn_len ){
                         
                        analog_state_update(0);
@@ -478,7 +471,7 @@ printf(">>>> 运行状态转换错误 强行进入待机状态 <<<<\r\n");
             }          
 /////////////////////////////////////////////////////////////////////////////////////////
 #if UART_DEBUG
-printf("-------- 处理完毕的数据 [ %02x%02x - %04d - %05d ] rec_flag %02x\r\n",receive_value[1],receive_value[2],receive_value[3]*256+receive_value[4],ENC_VAL,REC_flag);
+printf("-------- 处理完毕的数据 [ %02x%02x - %04d - %05d ]\r\n",receive_value[1],receive_value[2],receive_value[3]*256+receive_value[4],ENCODER_CNT_VALUE);
 #endif          
 
 

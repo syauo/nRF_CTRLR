@@ -102,7 +102,12 @@
 /* USER CODE BEGIN Private defines */
 // 串口打印调试信息
 #define UART_DEBUG  1   //1
+// 记录数组定义长度
+#define REC_LEN    140
+// 编码器读数
+#define ENC_VAL    ENCODER_CNT_VALUE
 //--------------IO 宏定义-------------------------
+
 // 闪灯状态指示
 #define CHK_FAIL   500
 #define NRF_DELAY  200  // 两次成功接收间隔
@@ -239,7 +244,7 @@ typedef struct{
 extern volatile LED_Status_t LED_Status;
 extern volatile error_status_t s_error;
 extern volatile run_status_t s_run;
-extern REC_data_t  up_rec[256], dwn_rec[256];
+extern REC_data_t  up_rec[REC_LEN], dwn_rec[REC_LEN];
 // 无线接收字节暂存数组
 extern uint8_t receive_value[6];
 // 模拟量接收值

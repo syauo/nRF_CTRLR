@@ -144,7 +144,7 @@ uint8_t rcv_nrf_data(void)
             trans_value = receive_value[3]*256 + receive_value[4];
      
         }
-        //HAL_Delay(NRF_DELAY);
+        HAL_Delay(NRF_DELAY);
         //delay_ms(NRF_DELAY);
         s_error.nrf_rcv_fail = 0;
         return 0;
@@ -154,7 +154,7 @@ uint8_t rcv_nrf_data(void)
 printf("        !!!!!!无线接收失败!!!!!!\r\n");
 #endif
         s_error.nrf_rcv_fail = 1;
-        //HAL_Delay(RCV_FAIL);
+        HAL_Delay(RCV_FAIL);
         //delay_ms(RCV_FAIL);
         return 1;
     }

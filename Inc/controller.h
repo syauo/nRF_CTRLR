@@ -19,7 +19,7 @@
 #define PWM_MIN          188
 #define PWM_MAX          494
 #define ACC_IDLE_VALUE   1479   // 怠速DA值（700mV*4096/Vref）
-#define REC_STEP         32     // 学习数据记录步长
+#define REC_STEP         500    //32     // 学习数据记录步长
 
 // 上下学习记录比较阈值
 #if UART_DEBUG
