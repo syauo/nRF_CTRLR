@@ -106,6 +106,24 @@
 #define REC_LEN    140
 // 编码器读数
 #define ENC_VAL    ENCODER_CNT_VALUE
+
+// PRINT 超级终端相关
+#define PRNT_DFT    "\033[0m"       // 关闭效果
+#define PRNT_P_CHK  "\033[3;35H"    // nrf在位检查
+#define PRNT_P_RCV  "\033[3;43H"    // nrf接收成功否
+#define PRNT_P_UP   "\033[4;28H"    // 上升学习OK？
+#define PRNT_P_DN   "\033[4;35H"    // 下降学习OK？
+#define PRNT_P_ALL  "\033[4;43H"    // 双向学习OK?
+#define PRNT_P_SW   "\033[5;43H"    // 开关归位OK？
+#define PRNT_P_DIO  "\033[6;33H"    // 接收的数字量
+#define PRNT_P_ADC  "\033[6;41H"    // 接收的电位器
+#define PRNT_P_STAT "\033[7;34H"    // 当前状态
+#define PRNT_P_REC  "\033[7;41H"    // 是否学习中
+#define PRNT_P_IDX  "\033[11;2H"    // 索引处
+#define PRNT_P_PWM  "\033[11;34H"   // PWM处
+#define PRNT_GR_STR "\033[1;42;37m%s\033[0m"    // 绿底白字
+#define PRNT_RD_STR "\033[1;41;37m%s\033[0m"    // 红底白字
+#define PRNT_FL_STR "\033[5m%s\033[0m"          // 闪烁-正常格式
 //--------------IO 宏定义-------------------------
 
 // 闪灯状态指示

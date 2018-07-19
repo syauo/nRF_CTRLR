@@ -10,11 +10,13 @@
 #define MIN_VALID        10     // 认为数据有效的最小值
 #define PWM_SEG_S        20     // PWM占空比快速变化开始
 #define PWM_SEG_QS       50     // PWM占空比快速变化结束 慢速变化开始
-#define RELAY_ON_VALUE   200    // 高于此值油门继电器介入
+#define RELAY_ON_VALUE   500    // 高于此值油门继电器介入
 #define PWM_SEG_E        2000   // PWM变化范围结束
 #define ACC_SEG_S        2000   // 模拟量划分 ACC_SEG_VALUE~4095 部分控制油门
 #define MAX_VALID        4095   // 模拟量范围 0~MAX_SEG_VALUE
 
+#define ADC_START_VAL    140    // 自动运行起始ADC
+#define ADC_STOP_VAL     50     // 自动运行结束前的ADC值
 // PWM 2kHz D=0~500
 #define PWM_MIN          188
 #define PWM_MAX          494
